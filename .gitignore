@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+
+# environments
+venv/
+SCALE-Sim/venv/
+
+# generated results / artifacts (do not push)
+SCALE-Sim/results*/
+SCALE-Sim/results/
+SCALE-Sim/result_*/
+SCALE-Sim/result*/
