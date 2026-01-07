@@ -2,7 +2,7 @@ import argparse
 import requests
 
 
-TOKEN = "8501073690:AAFi_dZa_wzmLYtNHa6GoptDGqqqdP7l3yY"
+TOKEN = "."
 CHAT_ID = "8325156711"
 
 def send_message(text):
