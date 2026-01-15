@@ -25,22 +25,5 @@ test_benchmark*
 result_parser.py
 test*
 configs_test
-benchmark_results# local env
-venv/
-.vscode/
-
-# results / logs
-results*/
-result*/
-*_out*
-*.csv
-*.log
-
-# ad-hoc scripts & notes (원하면 지워도 됨)
-guide_md/
-
-venv/
-results*/
-result*/
-.vscode/
-*_out*
+benchmark_results
+results/

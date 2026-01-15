@@ -77,10 +77,10 @@ SCALE-Sim uses two input files to run, a configuration file and a topology file.
 The configuration file is used to specify the architecture and run parameters for the simulations.
 The following shows a sample config file:
 
-![sample config](https://github.com/scalesim-project/scale-sim-v2/blob/main/documentation/resources/config-file-example.png "sample config")
+![sample config](./documentation/resources/config-file-example-new.png "sample config")
 
 The config file has three sections. The "*general*" section specifies the run name, which is user specific. The "*architecture_presets*" section describes the parameter of the systolic array hardware to simulate.
-The "*run_preset*" section specifies if the simulator should run with user specified bandwidth, or should it calculate the optimal bandwidth for stall free execution.
+The "*run_preset*" section specifies if the simulator should run with user specified bandwidth, or should it calculate the optimal bandwidth for stall free execution. It also allows specifying a `TimeLinearModel` parameter (e.g., `TPUv4`, `TPUv5e`, or `TPUv6e`) to convert compute cycles into time estimations using hardware-specific linear models.
 
 The detailed documentation for the config file could be found **here (TBD)**
 
@@ -104,11 +104,12 @@ Here is an example output dumped to stdout when running Yolo Tiny (whose configu
 ![screen_out](https://github.com/scalesim-project/scale-sim-v2/blob/doc/anand/readme/documentation/resources/output.png "std_out")
 
 Also, the simulator generates read write traces and summary logs at ```<run_dir>/../scalesim_outputs/```. The user can also provide a custom location using ```-p <custom_output_directory>``` when using `scalesim.py` file.
-There are three summary logs:
+There are four summary logs:
 
 * COMPUTE_REPORT.csv: Layer wise logs for compute cycles, stalls, utilization percentages etc.
 * BANDWIDTH_REPORT.csv: Layer wise information about average and maximum bandwidths for each operand when accessing SRAM and DRAM
 * DETAILED_ACCESS_REPORT.csv: Layer wise information about number of accesses and access cycles for each operand for SRAM and DRAM.
+* TIME_REPORT.csv: Layer wise time estimations in microseconds, calculated using the configured linear model (TPUv4, TPUv5e, or TPUv6e) based on compute cycles and spatiotemporal dimensions.
 
 In addition cycle accurate SRAM/DRAM access logs are also dumped and could be accesses at ```<outputs_dir>/<run_name>/``` eg `<run_dir>/../scalesim_outputs/<run_name>`
 

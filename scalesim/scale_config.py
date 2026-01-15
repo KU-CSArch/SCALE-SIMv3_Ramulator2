@@ -59,6 +59,9 @@ class scale_config:
     
     # Sarbartha: Added ramulator based DRAM trace support
         self.use_ramulator_trace = False
+        
+        # Time linear model parameter
+        self.time_linear_model = 'None'
     #
     def read_conf_file(self, conf_file_in):
         """
@@ -85,12 +88,20 @@ class scale_config:
             message += 'Use either USER or CALC in InterfaceBandwidth feild. Aborting!'
             return
         
-        ramulator_on = config.get(section, 'UseRamulatorTrace')
-        if ramulator_on == 'True':
-            self.use_ramulator_trace = True
-        else:
-            self.use_ramulator_trace = False
+        # Parse UseRamulatorTrace if present
+        if config.has_option(section, 'UseRamulatorTrace'):
+            ramulator_on = config.get(section, 'UseRamulatorTrace')
+            if ramulator_on == 'True':
+                self.use_ramulator_trace = True
+            else:
+                self.use_ramulator_trace = False
         
+        # Parse TimeLinearModel if present
+        if config.has_option(section, 'TimeLinearModel'):
+            self.time_linear_model = config.get(section, 'TimeLinearModel')
+            assert self.time_linear_model in ['None', 'TPUv4', 'TPUv5e', 'TPUv6e'], f"ERROR: Invalid time linear model '{self.time_linear_model}'. Must be one of: None, TPUv4, TPUv5e, TPUv6e"
+
+
         # TODO Sarbartha: Should be bw
         div_factor = 1
         
@@ -104,8 +115,12 @@ class scale_config:
         self.filter_offset = int(config.get(section, 'FilterOffset'))
         self.ofmap_offset = int(config.get(section, 'OfmapOffset'))
         self.df = config.get(section, 'Dataflow')
-        self.req_buf_sz_rd = int(config.get(section, 'ReadRequestBuffer')) // div_factor
-        self.req_buf_sz_wr = int(config.get(section, 'WriteRequestBuffer')) // div_factor
+        
+        # Make ReadRequestBuffer and WriteRequestBuffer optional
+        if config.has_option(section, 'ReadRequestBuffer'):
+            self.req_buf_sz_rd = int(config.get(section, 'ReadRequestBuffer')) // div_factor
+        if config.has_option(section, 'WriteRequestBuffer'):
+            self.req_buf_sz_wr = int(config.get(section, 'WriteRequestBuffer')) // div_factor
 
         layout_section = 'layout'
         self.using_ifmap_custom_layout = config.getboolean(layout_section, 'IfmapCustomLayout')
@@ -128,27 +143,28 @@ class scale_config:
         if config.has_section('network_presets'):  # Read network_presets
             self.topofile = config.get(section, 'TopologyCsvLoc').split('"')[1]
 
-        # Sparsity
-        section = 'sparsity'
-        if config.get(section, 'SparsitySupport').lower() == 'true':
-            self.sparsity_support = True
-        else:
-            self.sparsity_support = False
-
-        if self.sparsity_support:
-            self.sparsity_representation = config.get(section, 'SparseRep')
-            # self.sparsity_N = int(config.get(section, 'NonZeroElems'))
-            # self.sparsity_M = int(config.get(section, 'BlockSize'))
-            if config.get(section, 'OptimizedMapping').lower() == 'true':
-                self.sparsity_optimized_mapping = True
+        # Sparsity - make this section optional
+        if config.has_section('sparsity'):
+            section = 'sparsity'
+            if config.get(section, 'SparsitySupport').lower() == 'true':
+                self.sparsity_support = True
             else:
-                self.sparsity_optimized_mapping = False
+                self.sparsity_support = False
 
-            if self.sparsity_optimized_mapping:
-                self.sparsity_block_size = int(config.get(section, 'BlockSize'))
-                assert self.sparsity_block_size <= self.array_rows, "ERROR: Invalid block size"
+            if self.sparsity_support:
+                self.sparsity_representation = config.get(section, 'SparseRep')
+                # self.sparsity_N = int(config.get(section, 'NonZeroElems'))
+                # self.sparsity_M = int(config.get(section, 'BlockSize'))
+                if config.get(section, 'OptimizedMapping').lower() == 'true':
+                    self.sparsity_optimized_mapping = True
+                else:
+                    self.sparsity_optimized_mapping = False
 
-            self.sparsity_rand_seed = int(config.get(section, 'RandomNumberGeneratorSeed'))
+                if self.sparsity_optimized_mapping:
+                    self.sparsity_block_size = int(config.get(section, 'BlockSize'))
+                    assert self.sparsity_block_size <= self.array_rows, "ERROR: Invalid block size"
+
+                self.sparsity_rand_seed = int(config.get(section, 'RandomNumberGeneratorSeed'))
 
         self.valid_conf_flag = True
 
@@ -221,6 +237,13 @@ class scale_config:
         config.add_section(section)
         topofile = '"' + self.topofile + '"'
         config.set(section, 'TopologyCsvLoc', str(topofile))
+        
+        section = 'run_presets'
+        config.add_section(section)
+        bw_mode = 'USER' if self.use_user_bandwidth else 'CALC'
+        config.set(section, 'InterfaceBandwidth', str(bw_mode))
+        config.set(section, 'UseRamulatorTrace', str(self.use_ramulator_trace))
+        config.set(section, 'TimeLinearModel', str(self.time_linear_model))
 
         with open(conf_file_out, 'w') as configfile:
             config.write(configfile)
@@ -485,6 +508,14 @@ class scale_config:
         else:
             return min(self.bandwidths)
 
+    def get_time_linear_model(self):
+        """
+        Method to get the time linear model used for the simulation.
+        """
+        if self.valid_conf_flag:
+            return self.time_linear_model
+        return "Default"
+    
     # FIX ISSUE #14
     @staticmethod
     def get_default_conf_as_list():

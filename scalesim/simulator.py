@@ -9,6 +9,7 @@ from scalesim.scale_config import scale_config as cfg
 from scalesim.topology_utils import topologies as topo
 from scalesim.layout_utils import layouts as layout
 from scalesim.single_layer_sim import single_layer_sim as layer_sim
+from scalesim.linear_model.tpu import tpuv4_linear_model, tpuv5e_linear_model, tpuv6e_linear_model
 
 
 class simulator:
@@ -174,6 +175,11 @@ class simulator:
         header = ('LayerID, Total Cycles (incl. prefetch), Total Cycles, Stall Cycles, Overall Util %, Mapping Efficiency %,'
                   ' Compute Util %,\n')
         compute_report.write(header)
+        
+        # Create TIME_REPORT.csv for linear model time conversion
+        time_report_name = self.top_path + '/TIME_REPORT.csv'
+        time_report = open(time_report_name, 'w')
+        time_report.write('LayerID, Time (us),\n')
 
         bandwidth_report_name = self.top_path + '/BANDWIDTH_REPORT.csv'
         bandwidth_report = open(bandwidth_report_name, 'w')
@@ -214,6 +220,29 @@ class simulator:
             log += ', '.join([str(x) for x in compute_report_items_this_layer])
             log += ',\n'
             compute_report.write(log)
+            
+            # Generate TIME_REPORT entry using linear model
+            total_cycles = compute_report_items_this_layer[1]  # Total Cycles (not including prefetch)
+            time_linear_model = self.conf.get_time_linear_model()
+            
+            # Get spatiotemporal dimensions for this layer
+            dataflow = self.conf.get_dataflow()
+            s_row, s_col, t_time = self.topo.get_spatiotemporal_dims(layer_id=lid, df=dataflow)
+            
+            
+            # Apply the appropriate linear model based on config
+            if time_linear_model == 'TPUv4':
+                time_us = tpuv4_linear_model(total_cycles, s_row, s_col, t_time)
+            elif time_linear_model == 'TPUv5e':
+                time_us = tpuv5e_linear_model(total_cycles, s_row, s_col, t_time)
+            elif time_linear_model == 'TPUv6e':
+                time_us = tpuv6e_linear_model(total_cycles, s_row, s_col, t_time)
+            else:
+                # Default: no conversion, just use cycles as time
+                time_us = total_cycles
+            
+            time_log = str(lid) + ', ' + str(time_us) + ',\n'
+            time_report.write(time_log)
 
             bandwidth_report_items_this_layer = single_layer_obj.get_bandwidth_report_items()
             log = str(lid) + ', '
@@ -237,6 +266,7 @@ class simulator:
         compute_report.close()
         bandwidth_report.close()
         detail_report.close()
+        time_report.close()
         if self.conf.sparsity_support is True:
             sparse_report.close()
 
@@ -254,3 +284,4 @@ class simulator:
             total_cycles += cycles_this_layer
 
         return total_cycles
+
