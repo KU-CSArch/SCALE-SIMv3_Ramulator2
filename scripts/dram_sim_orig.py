@@ -124,9 +124,8 @@ class dataExtraction:
         ofmapIntegrityIndex=0
         flag =0
         total_count = 0
-        print("self.traceMap",self.traceMap)
-        f = open(self.traceMap,'w')
         
+        f = open(self.traceMap,'w')
         cycle = min(self.ifmapStartCycle,self.filterStartCycle,self.ofmapStartCycle)
         maxCycle= max(ifmapCycle[-1],filterCycle[-1],ofmapCycle[-1])
         while (cycle !=maxCycle+1):
@@ -187,28 +186,12 @@ class dataExtraction:
         print("The number of IFMAP, FILTER, OFMAP, integrity index is {} {} {} {}".format(ifmapIndex,filterIndex,ofmapIndex,ofmapIntegrityIndex))
 
     def runRamulator(self,prefix):
-        # output=subprocess.check_output([rootPath+"/submodules/ramulator/ramulator",
-        #                 rootPath+"/submodules/ramulator/configs/DDR4-config.cfg",
-        #                 "--mode=dram",
-        #                 "--stats",
-        #                 "results/DDR4_"+prefix+".stats",
-        #                 self.traceMap], universal_newlines=True)
-        proc1 = subprocess.Popen([
-        rootPath + "/submodules/ramulator2/build/ramulator2",
-        "-f", 
-        rootPath + "/submodules/ramulator2/trace_config.yaml",
-        "-p",
-        "Frontend.path=" + self.traceMap
-        ], stdout=subprocess.PIPE, universal_newlines=True)
-
-        # Pipe to grep
-        proc2 = subprocess.Popen(["grep", "^RD:\\|^WR:"], 
-                        stdin=proc1.stdout, 
-                        stdout=subprocess.PIPE, 
-                        universal_newlines=True)
-        proc1.stdout.close()  # Allow proc1 to receive a SIGPIPE if proc2 exits
-        output = proc2.communicate()[0]
-        #print(output)
+        output=subprocess.check_output([rootPath+"/submodules/ramulator/ramulator",
+                        rootPath+"/submodules/ramulator/configs/DDR4-config.cfg",
+                        "--mode=dram",
+                        "--stats",
+                        "results/DDR4_"+prefix+".stats",
+                        self.traceMap], universal_newlines=True)
         f = open(self.ramulatorOut, "w")
         f.write(output)
         f.close()
@@ -223,8 +206,8 @@ def worker(layer_path, topo, shaper):
     ofmap_file  = layer_path+"/OFMAP_DRAM_TRACE.csv"  #args.ofmap_file
     if not os.path.isdir(resultsPath):
         os.mkdir(resultsPath)
-    mem_trace_in  = resultsPath+"_DemandTrace_"+layer_no+".trace" #args.mem_trace_in
-    mem_trace_out = resultsPath+"_RamulatorTrace_"+layer_no+".trace" #args.mem_trace_out
+    mem_trace_in  = resultsPath+topo+"_DemandTrace_"+layer_no+".trace" #args.mem_trace_in
+    mem_trace_out = resultsPath+topo+"_RamulatorTrace_"+layer_no+".trace" #args.mem_trace_out
     ramulatorExtraction = dataExtraction(
                                         ifmapFile=ifmap_file,
                                         ofmapFile=ofmap_file,
@@ -238,24 +221,8 @@ def worker(layer_path, topo, shaper):
     print("starting layer {}".format(layer_path))
     ramulatorExtraction.extractAddress(ifmap_file,ofmap_file,filter_file,layer_no,shaper)
 
-    print("_DemandTrace_ file generated for layer {}".format(layer_path))
     prefix = topo+layer_no
-    print("rootPath={}".format(rootPath))
-    subprocess.run(["python3",
-                rootPath+"/to_ramulator2_compatible_trace.py",
-                "-i", resultsPath+"_DemandTrace_"+layer_no+".trace",
-                "-o", resultsPath+"_R2DemandTrace_"+layer_no+".trace"
-                ])
-
     print("Starting ramulator for layer {}".format(layer_path))
-
-    ramulatorExtraction = dataExtraction(
-                                        ifmapFile=ifmap_file,
-                                        ofmapFile=ofmap_file,
-                                        filterFile=filter_file,
-                                        traceMap=resultsPath+"_R2DemandTrace_"+layer_no+".trace",
-                                        ramulatorOut=resultsPath+"_RamulatorTrace_"+layer_no+".trace"
-                                    )
     ramulatorExtraction.runRamulator(prefix)
 
     print("Finished ramulator for layer {}".format(layer_path))
@@ -281,10 +248,9 @@ if __name__ == "__main__":
     run = args.run_name
     shaper = args.shaper
     layers_path = []
-    print("resultsPath: ", resultsPath)
-    if not os.listdir(resultsPath):
+    if not os.listdir(resultsPath+topology):
         assert "Generate DRAM demand transactions before running Ramulator"
-    filepath = resultsPath+'/'+run+'/'
+    filepath = resultsPath+topology+'/'+run+'/'
     for file in os.listdir(filepath):
         if file.startswith('layer') and os.path.isdir(filepath+file):
             layers_path.append(filepath+file)
@@ -293,4 +259,3 @@ if __name__ == "__main__":
     for layer_path in layers_path:
         p = mp.Process(target=worker, args=(layer_path, topology, shaper))
         p.start()
-

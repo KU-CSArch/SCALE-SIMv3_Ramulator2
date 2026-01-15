@@ -37,7 +37,44 @@ class layouts(object):
 
     #
     def load_arrays(self, layoutfile='', mnk_inputs=False):
-        self.load_layout_conv(layoutfile)
+        if mnk_inputs:
+            self.load_layout_gemm(layoutfile)
+        else:
+            self.load_layout_conv(layoutfile)
+
+    def load_layout_gemm(self, layoutfile):
+        """Load GEMM-format layout file (M:X, K:Y, N:Z, temporal_map)"""
+        first = True
+        self.layout_file_name = layoutfile.split('/')[-1]
+        name_arr = self.layout_file_name.split('.')
+        if len(name_arr) > 1:
+            self.current_layout_name = self.layout_file_name.split('.')[-2]
+        else:
+            self.current_layout_name = self.layout_file_name
+        
+        f = open(layoutfile, 'r')
+        for row in f:
+            row = row.strip()
+            if first or row == '':
+                first = False
+            else:
+                elems = row.split(',')[:-1]
+                layer_name = elems[0].strip()
+                
+                # Parse M:X, K:Y, N:Z format
+                m_val = int(elems[1].strip().split(':')[1]) if ':' in elems[1] else 1
+                k_val = int(elems[2].strip().split(':')[1]) if ':' in elems[2] else 1
+                n_val = int(elems[3].strip().split(':')[1]) if ':' in elems[3] else 1
+                temporal = elems[4].strip() if len(elems) > 4 else "K:K"
+                
+                # Create entry compatible with existing get methods
+                # Store as: [name, m_val, k_val, n_val, temporal]
+                entry = [layer_name, m_val, k_val, n_val, temporal]
+                self.layout_arrays.append(entry)
+        
+        f.close()
+        self.num_layers = len(self.layout_arrays)
+        self.layout_load_flag = True
 
     def load_layout_conv(self, layoutfile):
         first = True

@@ -86,6 +86,7 @@ class scalesim:
             self.config_file = config_filename
 
         # Parse config first
+        # Read the config file
         self.config.read_conf_file(self.config_file)
 
         # Take the CLI topology over the one in config
@@ -93,11 +94,13 @@ class scalesim:
         if self.topology_file == '':
             self.topology_file = self.config.get_topology_path()
         else:
+            #set up the topology file in config object
             self.config.set_topology_file(self.topology_file)
 
         if self.layout_file == '':
             self.layout_file = self.config.get_layout_path()
         else:
+            #set up the layout file in config object
             self.config.set_layout_file(self.layout_file)
 
         # Parse the topology

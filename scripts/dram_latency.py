@@ -29,10 +29,10 @@ class dram_latency():
         print("starting to read file " + str(self.ramulatorFile))
         df = pd.read_csv(self.ramulatorFile,header=None,skipfooter=1,delimiter=' ',engine='python')
         print("file read")
-        df = df.sort_values(2)
+        df = df.sort_values(2).reset_index(drop=True)
         print("sorting")
         latency = df[3]-df[2]
-        print("latency")
+        print(f"latency : {latency} ")
         df[1] = df[1].str.replace('0x','')
         df[1] = df[1].apply(lambda x: int(x,16))
         count=0
@@ -65,7 +65,8 @@ class dram_latency():
 #                        print(k)
 #                        print(i)
 #                    k=i
-            addressList = df[1][count:endIndex].sort_values().to_list()
+
+            addressList = df[1].iloc[count:count+self.bw].to_list()
             startAddress = addressList[0]
             endAddress = addressList[-1]
 
@@ -77,14 +78,8 @@ class dram_latency():
                 ifmapAddress =  (0 <= startAddress < self.filterOffset) and (0 <= endAddress < self.filterOffset)
                 filterAddress = (self.filterOffset <= startAddress < self.ofmapOffset) and (self.filterOffset <= endAddress < self.ofmapOffset)
                 ofmapAddress =  (self.ofmapOffset <= startAddress < self.metaOffset) and (self.ofmapOffset <= startAddress < self.metaOffset)
-                #ifmapAddress =  startAddress in range(0,self.filterOffset) and endAddress in range(0,self.filterOffset)
-                #filterAddress=  startAddress in range(self.filterOffset,self.ofmapOffset) and endAddress in range(self.filterOffset,self.ofmapOffset)
-                #ofmapAddress =  startAddress in range(self.ofmapOffset,self.metaOffset) and endAddress in range(self.ofmapOffset,self.metaOffset)
 
             if shaper == 1:
-                #a=[]
-                #for i in range(count,count+self.bw):
-                #    a.append(df[2][i])
 
                 if ifmapAddress:
                     self.ifmapLatency.append(np.amax(latency[count:count+self.bw]))
@@ -151,9 +146,9 @@ class dram_latency():
         #print("-------------------------- OFMAP Latency -------------------------")
         #print(self.ofmapLatency)
 
-        np.save(resultsPath+"/"+topo+'_ifmapFile'+layerNo+'.npy',self.ifmapLatency)
-        np.save(resultsPath+"/"+topo+'_filterFile'+layerNo+'.npy',self.filterLatency)
-        np.save(resultsPath+"/"+topo+'_ofmapFile'+layerNo+'.npy',self.ofmapLatency)
+        np.save(resultsPath+"/"+'_ifmapFile'+layerNo+'.npy',self.ifmapLatency)
+        np.save(resultsPath+"/"+'_filterFile'+layerNo+'.npy',self.filterLatency)
+        np.save(resultsPath+"/"+'_ofmapFile'+layerNo+'.npy',self.ofmapLatency)
 
     def check_integrity_address(self,address):
         address = address - self.metaOffset

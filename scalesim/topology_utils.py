@@ -138,7 +138,13 @@ class topologies(object):
             else:
                 elems = row.split(',')[:-1]
 
-                # Add the same stride in the col direction automatically
+                # Ensure we have enough fields. If stride values are missing, pad with '1'.
+                if len(elems) < 8:
+                    # Pad missing numeric fields with default '1'
+                    while len(elems) < 8:
+                        elems.append('1')
+
+                # Add the same stride in the col direction automatically (duplicate stride_h)
                 elems = elems[0:8] + [elems[7]] + elems[8:]
 
                 # Parsing sparsity ratio
@@ -217,7 +223,7 @@ class topologies(object):
         """
         entry = [layer_name]
 
-        for i in range(1, len(elems)):
+        for i in range(1, len(elems)):#element length
             val = int(str(elems[i]).strip())
             entry.append(val)
             # These 3 lines are taken care in the parent function call
